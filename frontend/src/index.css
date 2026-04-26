@@ -1,0 +1,97 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --canvas: 247 243 235;
+    --ink: 25 38 72;
+    --brand: 222 108 43;
+    --brand-dark: 184 86 26;
+    --aqua: 51 136 156;
+    --surface: 255 251 244;
+    --line: 218 224 233;
+    --muted: 101 113 138;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-canvas font-body text-ink antialiased;
+    background-image:
+      radial-gradient(circle at 10% 5%, rgba(51, 136, 156, 0.16), transparent 24%),
+      radial-gradient(circle at 92% 12%, rgba(222, 108, 43, 0.14), transparent 22%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.2));
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading tracking-tight;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[30px] border border-white/70 bg-white/80 shadow-card backdrop-blur-xl;
+  }
+
+  .panel-muted {
+    @apply rounded-[26px] border border-white/70 bg-surface/85 shadow-[0_18px_48px_rgba(25,38,72,0.08)] backdrop-blur;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-ink/10 bg-white px-5 py-3 text-sm font-semibold text-ink transition duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink transition duration-200 hover:border-ink/25 hover:bg-white/60;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-ink/10 bg-white/90 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-brand/60 focus:bg-white focus:shadow-[0_0_0_4px_rgba(222,108,43,0.14)];
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em];
+  }
+
+  .badge-brand {
+    @apply badge bg-brand/10 text-brand;
+  }
+
+  .badge-aqua {
+    @apply badge bg-aqua/10 text-aqua;
+  }
+
+  .badge-ink {
+    @apply badge bg-ink/10 text-ink;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl;
+  }
+
+  .section-copy {
+    @apply max-w-2xl text-sm leading-7 text-slate-600 sm:text-base;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
