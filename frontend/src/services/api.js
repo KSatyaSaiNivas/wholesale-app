@@ -41,6 +41,13 @@ export function loginUser(credentials) {
   });
 }
 
+export function loginAdmin(credentials) {
+  return request("/admin-login", {
+    method: "POST",
+    body: credentials,
+  });
+}
+
 export function registerUser(payload) {
   return request("/register", {
     method: "POST",

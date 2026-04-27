@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [form, setForm] = useState({
     mobileNumber: "",
     password: "",
@@ -32,7 +32,14 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login(form);
+      const data = await login(form);
+
+      if (data.user?.isAdmin) {
+        logout();
+        setError("Admin accounts must use the admin login page.");
+        return;
+      }
+
       navigate(redirectTo, { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Unable to log you in.");

@@ -7,6 +7,7 @@ import PublicOnlyRoute from "./components/PublicOnlyRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminLoginPage from "./pages/AdminLoginPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import HomePage from "./pages/HomePage";
@@ -44,6 +45,14 @@ export default function App() {
                   <AdminRoute>
                     <AdminDashboardPage />
                   </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin-login"
+                element={
+                  <PublicOnlyRoute>
+                    <AdminLoginPage />
+                  </PublicOnlyRoute>
                 }
               />
               <Route

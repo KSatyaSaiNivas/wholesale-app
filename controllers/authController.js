@@ -97,8 +97,57 @@ const loginUser = async (req, res, next) => {
       });
     }
 
+    if (user.isAdmin) {
+      return res.status(403).json({
+        message: "Admin accounts must use the admin login page",
+      });
+    }
+
     return res.status(200).json({
       message: "Login successful",
+      user: sanitizeUser(user),
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const loginAdmin = async (req, res, next) => {
+  try {
+    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const { password } = req.body;
+
+    if (!MOBILE_REGEX.test(mobileNumber) || !password) {
+      return res.status(400).json({
+        message: "Admin mobile number and password are required",
+      });
+    }
+
+    const user = await User.findOne({ mobileNumber }).select("+password");
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid admin mobile number or password",
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Invalid admin mobile number or password",
+      });
+    }
+
+    if (!user.isAdmin) {
+      return res.status(403).json({
+        message: "Only admin accounts can use this login page",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Admin login successful",
       user: sanitizeUser(user),
       token: generateToken(user._id),
     });
@@ -192,6 +241,7 @@ const resetPassword = async (req, res, next) => {
 module.exports = {
   registerUser,
   loginUser,
+  loginAdmin,
   forgotPassword,
   resetPassword,
 };

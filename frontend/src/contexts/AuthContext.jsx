@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import { loginUser, registerUser } from "../services/api";
+import { loginAdmin, loginUser, registerUser } from "../services/api";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "wholesale-current-auth";
@@ -52,6 +52,15 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  async function adminLogin(credentials) {
+    const data = await loginAdmin(credentials);
+    setSession({
+      token: data.token,
+      user: data.user,
+    });
+    return data;
+  }
+
   async function register(payload) {
     const data = await registerUser(payload);
     setSession({
@@ -75,6 +84,7 @@ export function AuthProvider({ children }) {
         user: session.user,
         isAuthenticated: Boolean(session.token && session.user),
         login,
+        adminLogin,
         register,
         logout,
       }}
