@@ -79,7 +79,9 @@ export default function AppLayout() {
                 {isAuthenticated ? (
                   <>
                     <div className="panel-muted px-4 py-2">
-                      <p className="text-sm font-semibold text-ink">{user.mobileNumber}</p>
+                      <p className="text-sm font-semibold text-ink">
+                        {user.name || user.mobileNumber}
+                      </p>
                       <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
                         {user.isAdmin
                           ? "Admin access active"
@@ -126,7 +128,9 @@ export default function AppLayout() {
                 {isAuthenticated ? (
                   <div className="panel-muted flex flex-col gap-3 px-4 py-4">
                     <div>
-                      <p className="text-sm font-semibold text-ink">{user.mobileNumber}</p>
+                      <p className="text-sm font-semibold text-ink">
+                        {user.name || user.mobileNumber}
+                      </p>
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                         {user.isAdmin
                           ? "Admin access active"

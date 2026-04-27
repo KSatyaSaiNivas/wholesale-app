@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
   const [form, setForm] = useState({
     mobileNumber: "",
     password: "",
@@ -33,14 +33,7 @@ export default function LoginPage() {
 
     try {
       const data = await login(form);
-
-      if (data.user?.isAdmin) {
-        logout();
-        setError("Admin accounts must use the admin login page.");
-        return;
-      }
-
-      navigate(redirectTo, { replace: true });
+      navigate(data.user?.isAdmin ? "/admin" : redirectTo, { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Unable to log you in.");
     } finally {
@@ -89,6 +82,12 @@ export default function LoginPage() {
           New to the platform?{" "}
           <Link className="font-semibold text-brand" to="/register">
             Create an account
+          </Link>
+        </p>
+        <p className="mt-3 text-sm text-slate-600">
+          Forgot your password?{" "}
+          <Link className="font-semibold text-brand" to="/forgot-password">
+            Reset it with OTP
           </Link>
         </p>
       </div>

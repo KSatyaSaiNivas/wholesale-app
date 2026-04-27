@@ -20,6 +20,25 @@ const hashOtp = (otp) =>
 
 const userSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
+      minlength: 2,
+      maxlength: 80,
+      default: "Customer",
+    },
+    phone: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      set: normalizeMobileNumber,
+      validate: {
+        validator: (value) => !value || /^\d{10,15}$/.test(value),
+        message: "Phone number must contain 10 to 15 digits",
+      },
+    },
     mobileNumber: {
       type: String,
       required: [true, "Mobile number is required"],
@@ -42,9 +61,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     isAdmin: {
       type: Boolean,
       default: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpires: {
+      type: Date,
+      select: false,
     },
     passwordResetOtpHash: {
       type: String,
@@ -60,6 +91,16 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.pre("validate", function syncPhoneFields() {
+  if (!this.phone && this.mobileNumber) {
+    this.phone = this.mobileNumber;
+  }
+
+  if (!this.mobileNumber && this.phone) {
+    this.mobileNumber = this.phone;
+  }
+});
+
 userSchema.pre("save", async function hashPassword() {
   if (!this.isModified("password")) {
     return;
@@ -73,13 +114,27 @@ userSchema.methods.comparePassword = function comparePassword(candidatePassword)
 };
 
 userSchema.methods.setPasswordResetOtp = function setPasswordResetOtp(otp) {
+  this.otp = String(otp);
+  this.otpExpires = new Date(Date.now() + OTP_EXPIRY_MS);
   this.passwordResetOtpHash = hashOtp(otp);
-  this.passwordResetOtpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+  this.passwordResetOtpExpiresAt = this.otpExpires;
 };
 
 userSchema.methods.clearPasswordResetOtp = function clearPasswordResetOtp() {
+  this.otp = undefined;
+  this.otpExpires = undefined;
   this.passwordResetOtpHash = undefined;
   this.passwordResetOtpExpiresAt = undefined;
+};
+
+userSchema.methods.setOtp = function setOtp(otp) {
+  this.otp = String(otp);
+  this.otpExpires = new Date(Date.now() + OTP_EXPIRY_MS);
+};
+
+userSchema.methods.clearOtp = function clearOtp() {
+  this.otp = undefined;
+  this.otpExpires = undefined;
 };
 
 module.exports = mongoose.model("User", userSchema);

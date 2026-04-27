@@ -171,13 +171,11 @@ export default function AdminDashboardPage() {
     if (
       !payload.name ||
       productForm.price === "" ||
-      productForm.stock === "" ||
-      !payload.category ||
-      !payload.imageUrl
+      productForm.stock === ""
     ) {
       setMessage({
         type: "error",
-        text: "Please complete every product field before saving.",
+        text: "Please enter product name, price, and stock before saving.",
       });
       return;
     }
@@ -198,6 +196,7 @@ export default function AdminDashboardPage() {
         const data = await createProduct(token, payload);
         setProducts((current) => [data.product, ...current]);
         setMessage({ type: "success", text: "Product created successfully." });
+        window.alert("Product Added");
       }
 
       resetProductForm();
@@ -480,6 +479,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <FormField
+                  helpText="Optional. Defaults to General."
                   label="Category"
                   name="category"
                   onChange={handleProductFormChange}
@@ -487,6 +487,7 @@ export default function AdminDashboardPage() {
                   value={productForm.category}
                 />
                 <FormField
+                  helpText="Optional. A default product image is used when empty."
                   label="Image URL"
                   name="imageUrl"
                   onChange={handleProductFormChange}

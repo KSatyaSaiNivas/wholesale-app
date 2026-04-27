@@ -24,15 +24,36 @@ const generateToken = (userId) =>
 
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
+  name: user.name,
+  phone: user.phone || user.mobileNumber,
   mobileNumber: user.mobileNumber,
   isTrusted: user.isTrusted,
   isAdmin: user.isAdmin,
+  isVerified: user.isVerified,
+});
+
+const sendOtp = ({ phone, otp, purpose }) => {
+  // Replace this with Twilio, MSG91, or another SMS provider in production.
+  console.log(`[OTP:${purpose}] ${phone} -> ${otp}`);
+};
+
+const buildOtpResponse = (message, otp) => ({
+  message,
+  requiresOtp: true,
+  ...(process.env.NODE_ENV === "production" ? {} : { devOtp: otp }),
 });
 
 const registerUser = async (req, res, next) => {
   try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const mobileNumber = normalizeMobileNumber(req.body.phone || req.body.mobileNumber);
     const { password } = req.body;
+
+    if (name.length < 2) {
+      return res.status(400).json({
+        message: "Name must be at least 2 characters long",
+      });
+    }
 
     if (!MOBILE_REGEX.test(mobileNumber)) {
       return res.status(400).json({
@@ -47,21 +68,80 @@ const registerUser = async (req, res, next) => {
       });
     }
 
-    const existingUser = await User.findOne({ mobileNumber });
+    const existingUser = await User.findOne({
+      $or: [{ mobileNumber }, { phone: mobileNumber }],
+    }).select("+otp +otpExpires");
 
-    if (existingUser) {
+    if (existingUser?.isVerified) {
       return res.status(409).json({
         message: "User already exists with this mobile number",
       });
     }
 
-    const user = await User.create({
-      mobileNumber,
-      password,
-    });
+    const otp = generateOtp();
+
+    if (existingUser) {
+      existingUser.name = name;
+      existingUser.phone = mobileNumber;
+      existingUser.mobileNumber = mobileNumber;
+      existingUser.password = password;
+      existingUser.isVerified = false;
+      existingUser.setOtp(otp);
+      await existingUser.save();
+    } else {
+      const user = new User({
+        name,
+        phone: mobileNumber,
+        mobileNumber,
+        password,
+        isVerified: false,
+      });
+      user.setOtp(otp);
+      await user.save();
+    }
+
+    sendOtp({ phone: mobileNumber, otp, purpose: "registration" });
+
+    return res.status(200).json(
+      buildOtpResponse("OTP sent to your mobile number. Verify it to complete registration.", otp)
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const verifyRegistration = async (req, res, next) => {
+  try {
+    const mobileNumber = normalizeMobileNumber(req.body.phone || req.body.mobileNumber);
+    const otp = String(req.body.otp || "").trim();
+
+    if (!MOBILE_REGEX.test(mobileNumber) || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        message: "Valid mobile number and 6-digit OTP are required",
+      });
+    }
+
+    const user = await User.findOne({
+      $or: [{ mobileNumber }, { phone: mobileNumber }],
+    }).select("+otp +otpExpires");
+
+    if (
+      !user ||
+      user.otp !== otp ||
+      !user.otpExpires ||
+      user.otpExpires.getTime() < Date.now()
+    ) {
+      return res.status(400).json({
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    user.isVerified = true;
+    user.clearOtp();
+    await user.save({ validateBeforeSave: false });
 
     return res.status(201).json({
-      message: "User registered successfully",
+      message: "Registration verified successfully",
       user: sanitizeUser(user),
       token: generateToken(user._id),
     });
@@ -72,7 +152,7 @@ const registerUser = async (req, res, next) => {
 
 const loginUser = async (req, res, next) => {
   try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const mobileNumber = normalizeMobileNumber(req.body.phone || req.body.mobileNumber);
     const { password } = req.body;
 
     if (!MOBILE_REGEX.test(mobileNumber) || !password) {
@@ -81,7 +161,9 @@ const loginUser = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ mobileNumber }).select("+password");
+    const user = await User.findOne({
+      $or: [{ mobileNumber }, { phone: mobileNumber }],
+    }).select("+password");
 
     if (!user) {
       return res.status(401).json({
@@ -97,9 +179,9 @@ const loginUser = async (req, res, next) => {
       });
     }
 
-    if (user.isAdmin) {
+    if (!user.isVerified) {
       return res.status(403).json({
-        message: "Admin accounts must use the admin login page",
+        message: "Please verify your mobile number before logging in",
       });
     }
 
@@ -113,52 +195,9 @@ const loginUser = async (req, res, next) => {
   }
 };
 
-const loginAdmin = async (req, res, next) => {
-  try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
-    const { password } = req.body;
-
-    if (!MOBILE_REGEX.test(mobileNumber) || !password) {
-      return res.status(400).json({
-        message: "Admin mobile number and password are required",
-      });
-    }
-
-    const user = await User.findOne({ mobileNumber }).select("+password");
-
-    if (!user) {
-      return res.status(401).json({
-        message: "Invalid admin mobile number or password",
-      });
-    }
-
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        message: "Invalid admin mobile number or password",
-      });
-    }
-
-    if (!user.isAdmin) {
-      return res.status(403).json({
-        message: "Only admin accounts can use this login page",
-      });
-    }
-
-    return res.status(200).json({
-      message: "Admin login successful",
-      user: sanitizeUser(user),
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
 const forgotPassword = async (req, res, next) => {
   try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const mobileNumber = normalizeMobileNumber(req.body.phone || req.body.mobileNumber);
 
     if (!MOBILE_REGEX.test(mobileNumber)) {
       return res.status(400).json({
@@ -166,7 +205,9 @@ const forgotPassword = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ mobileNumber });
+    const user = await User.findOne({
+      $or: [{ mobileNumber }, { phone: mobileNumber }],
+    });
 
     if (!user) {
       return res.status(200).json({
@@ -179,11 +220,14 @@ const forgotPassword = async (req, res, next) => {
     user.setPasswordResetOtp(otp);
     await user.save({ validateBeforeSave: false });
 
-    // Integrate an SMS provider here to deliver the OTP securely.
-    return res.status(200).json({
-      message:
+    sendOtp({ phone: mobileNumber, otp, purpose: "password-reset" });
+
+    return res.status(200).json(
+      buildOtpResponse(
         "If the mobile number is registered, a password reset OTP will be sent shortly",
-    });
+        otp
+      )
+    );
   } catch (error) {
     return next(error);
   }
@@ -191,9 +235,9 @@ const forgotPassword = async (req, res, next) => {
 
 const resetPassword = async (req, res, next) => {
   try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const mobileNumber = normalizeMobileNumber(req.body.phone || req.body.mobileNumber);
     const otp = String(req.body.otp || "").trim();
-    const newPassword = req.body.newPassword || "";
+    const newPassword = req.body.newPassword || req.body.password || "";
 
     if (!MOBILE_REGEX.test(mobileNumber) || !/^\d{6}$/.test(otp)) {
       return res.status(400).json({
@@ -208,18 +252,16 @@ const resetPassword = async (req, res, next) => {
       });
     }
 
-    const hashedOtp = hashOtp(otp);
-
-    const user = await User.findOne({ mobileNumber }).select(
-      "+password +passwordResetOtpHash +passwordResetOtpExpiresAt"
-    );
+    const user = await User.findOne({
+      $or: [{ mobileNumber }, { phone: mobileNumber }],
+    }).select("+password +otp +otpExpires +passwordResetOtpHash +passwordResetOtpExpiresAt");
 
     if (
       !user ||
-      !user.passwordResetOtpHash ||
-      user.passwordResetOtpHash !== hashedOtp ||
-      !user.passwordResetOtpExpiresAt ||
-      user.passwordResetOtpExpiresAt.getTime() < Date.now()
+      !user.otp ||
+      user.otp !== otp ||
+      !user.otpExpires ||
+      user.otpExpires.getTime() < Date.now()
     ) {
       return res.status(400).json({
         message: "Invalid or expired OTP",
@@ -240,8 +282,8 @@ const resetPassword = async (req, res, next) => {
 
 module.exports = {
   registerUser,
+  verifyRegistration,
   loginUser,
-  loginAdmin,
   forgotPassword,
   resetPassword,
 };

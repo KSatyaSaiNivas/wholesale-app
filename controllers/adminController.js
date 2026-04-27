@@ -14,9 +14,12 @@ const createError = (statusCode, message) => {
 
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
+  name: user.name,
+  phone: user.phone || user.mobileNumber,
   mobileNumber: user.mobileNumber,
   isTrusted: user.isTrusted,
   isAdmin: user.isAdmin,
+  isVerified: user.isVerified,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -26,6 +29,8 @@ const serializeOrder = (order) => ({
   user: order.userId
     ? {
         id: order.userId._id.toString(),
+        name: order.userId.name,
+        phone: order.userId.phone || order.userId.mobileNumber,
         mobileNumber: order.userId.mobileNumber,
         isTrusted: order.userId.isTrusted,
         isAdmin: order.userId.isAdmin,
@@ -43,7 +48,7 @@ const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
       .sort({ createdAt: -1 })
-      .select("mobileNumber isTrusted isAdmin createdAt updatedAt");
+      .select("name phone mobileNumber isTrusted isAdmin isVerified createdAt updatedAt");
 
     return res.status(200).json({
       count: users.length,
@@ -93,7 +98,7 @@ const getAllOrders = async (req, res, next) => {
   try {
     const orders = await Order.find()
       .sort({ createdAt: -1 })
-      .populate("userId", "mobileNumber isTrusted isAdmin");
+      .populate("userId", "name phone mobileNumber isTrusted isAdmin");
 
     return res.status(200).json({
       count: orders.length,
@@ -122,7 +127,7 @@ const updateOrderStatus = async (req, res, next) => {
 
     const order = await Order.findById(id).populate(
       "userId",
-      "mobileNumber isTrusted isAdmin"
+      "name phone mobileNumber isTrusted isAdmin"
     );
 
     if (!order) {
@@ -132,7 +137,7 @@ const updateOrderStatus = async (req, res, next) => {
     const previousStatus = order.status;
     order.status = status;
     await order.save();
-    await order.populate("userId", "mobileNumber isTrusted isAdmin");
+    await order.populate("userId", "name phone mobileNumber isTrusted isAdmin");
 
     if (previousStatus !== "Delivered" && order.status === "Delivered") {
       sendDeliveredOrderNotification({

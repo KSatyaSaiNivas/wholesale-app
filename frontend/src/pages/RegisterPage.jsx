@@ -6,11 +6,15 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, verifyRegisterOtp } = useAuth();
   const [form, setForm] = useState({
+    name: "",
     mobileNumber: "",
     password: "",
+    otp: "",
   });
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [devOtp, setDevOtp] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -19,7 +23,7 @@ export default function RegisterPage() {
 
     setForm((current) => ({
       ...current,
-      [name]: name === "mobileNumber" ? value.replace(/\D/g, "") : value,
+      [name]: name === "mobileNumber" || name === "otp" ? value.replace(/\D/g, "") : value,
     }));
   }
 
@@ -29,7 +33,23 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await register(form);
+      if (!isOtpStep) {
+        const data = await register({
+          name: form.name,
+          phone: form.mobileNumber,
+          mobileNumber: form.mobileNumber,
+          password: form.password,
+        });
+        setIsOtpStep(true);
+        setDevOtp(data.devOtp || "");
+        return;
+      }
+
+      await verifyRegisterOtp({
+        phone: form.mobileNumber,
+        mobileNumber: form.mobileNumber,
+        otp: form.otp,
+      });
       navigate("/", { replace: true });
     } catch (submitError) {
       setError(submitError.message || "Unable to register right now.");
@@ -49,6 +69,15 @@ export default function RegisterPage() {
         </p>
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+          <FormField
+            autoComplete="name"
+            label="Name"
+            name="name"
+            onChange={handleChange}
+            placeholder="Enter your name"
+            value={form.name}
+          />
+
           <FormField
             autoComplete="tel"
             inputMode="numeric"
@@ -70,10 +99,30 @@ export default function RegisterPage() {
             value={form.password}
           />
 
+          {isOtpStep ? (
+            <FormField
+              autoComplete="one-time-code"
+              helpText={devOtp ? `Development OTP: ${devOtp}` : "Enter the OTP sent to your mobile number."}
+              inputMode="numeric"
+              label="OTP"
+              maxLength="6"
+              name="otp"
+              onChange={handleChange}
+              placeholder="Enter 6-digit OTP"
+              value={form.otp}
+            />
+          ) : null}
+
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
 
           <button className="btn-primary w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Creating account..." : "Register"}
+            {isSubmitting
+              ? isOtpStep
+                ? "Verifying OTP..."
+                : "Sending OTP..."
+              : isOtpStep
+                ? "Verify OTP & Register"
+                : "Send OTP"}
           </button>
         </form>
 

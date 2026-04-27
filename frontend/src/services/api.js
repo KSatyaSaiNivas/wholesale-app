@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://wholesale-backend-4z9t.onrender.com";
 
 async function request(path, options = {}) {
   const { method = "GET", body, token, signal } = options;
@@ -41,15 +42,29 @@ export function loginUser(credentials) {
   });
 }
 
-export function loginAdmin(credentials) {
-  return request("/admin-login", {
+export function registerUser(payload) {
+  return request("/register", {
     method: "POST",
-    body: credentials,
+    body: payload,
   });
 }
 
-export function registerUser(payload) {
-  return request("/register", {
+export function verifyRegistration(payload) {
+  return request("/verify-register", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function forgotPassword(payload) {
+  return request("/forgot-password", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function resetPassword(payload) {
+  return request("/reset-password", {
     method: "POST",
     body: payload,
   });

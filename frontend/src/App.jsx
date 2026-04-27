@@ -6,10 +6,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicOnlyRoute from "./components/PublicOnlyRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
-import AdminLoginPage from "./pages/AdminLoginPage";
+import AdminPage from "./pages/AdminPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -40,19 +40,19 @@ export default function App() {
                 }
               />
               <Route
-                path="/admin"
+                path="/forgot-password"
                 element={
-                  <AdminRoute>
-                    <AdminDashboardPage />
-                  </AdminRoute>
+                  <PublicOnlyRoute>
+                    <ForgotPasswordPage />
+                  </PublicOnlyRoute>
                 }
               />
               <Route
-                path="/admin-login"
+                path="/admin"
                 element={
-                  <PublicOnlyRoute>
-                    <AdminLoginPage />
-                  </PublicOnlyRoute>
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
                 }
               />
               <Route

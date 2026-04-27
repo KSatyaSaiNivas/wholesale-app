@@ -12,8 +12,8 @@ const createProduct = async (req, res, next) => {
       name,
       price,
       stock,
-      category,
-      imageUrl,
+      ...(category ? { category } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
     });
 
     return res.status(201).json({
